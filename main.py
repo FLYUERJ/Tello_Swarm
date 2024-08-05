@@ -7,14 +7,14 @@ def executeAsync(drone : Tello_Paulo):
     drone.connect()
 
     time.sleep(0.01)
-    drone.send_command("battery?")
+    print(drone.getBattery())
 
     time.sleep(0.1)
-    drone.send_command("takeoff")
+    drone.takeoff()
 
     time.sleep(5)
 
-    drone.send_command("land")
+    drone.land()
 
 drone1 = Tello_Paulo("wlx50016b32a1cd")
 drone2 = Tello_Paulo("wlxf085c1c9e7eb")

@@ -33,6 +33,10 @@ class Stats:
             return False
         else:
             return True
+    
+    def get_response(self):
+        
+        return self.response
 
     def return_stats(self):
         str = ''
