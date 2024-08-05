@@ -4,7 +4,7 @@ import threading
 
 def executeAsync(drone : Tello_Paulo):
 
-    drone.send_command("command")
+    drone.connect()
 
     time.sleep(0.01)
     drone.send_command("battery?")
