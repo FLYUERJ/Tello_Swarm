@@ -1,5 +1,9 @@
 import pyvicon
 import time
+from enum import Enum
+from pyvicon import StreamMode, Direction
+
+
 
 vicon = pyvicon.PyVicon()
 
@@ -11,12 +15,22 @@ vicon.enable_segment_data()
 vicon.enable_marker_data()
 vicon.enable_unlabeled_marker_data()
 
-vicon_object = vicon.get_axis_mapping()
+#MyClient.SetStreamMode( ViconDataStreamSDK::CPP::StreamMode::ClientPull ); Client pull is 0 on enum
+vicon.set_stream_mode(StreamMode.ClientPull)
+
+#MyClient.SetAxisMapping( Direction::Forward,
+#Direction::Left,
+#Direction::Up )
+vicon.set_axis_mapping(Direction.Forward,Direction.Left,Direction.Up)
+
+counts = vicon.get_subject_count()
+
 
 while True:
-    print(vicon.get_axis_mapping())
-    print(vicon.get_marker_name("disco",0))
-    print(vicon.get_subject_count())
+    counts = vicon.get_subject_count()
+    print(counts)
+    ##print(vicon.get_marker_name("disco",0))
+    ##print(vicon.get_subject_count())
     time.sleep(0.03)
 
     pass
