@@ -1,0 +1,70 @@
+#include <iostream>
+#include <ViconDataStreamSDK_CPP/DataStreamClient.h>
+#include <unistd.h>  // Para sleep()
+
+using namespace ViconDataStreamSDK::CPP;
+
+int main()
+{
+    // Cria o cliente
+    Client myClient;
+
+    // Conecta ao servidor Vicon
+    std::cout << "Connecting to Vicon server..." << std::endl;
+    while (!myClient.IsConnected().Connected)
+    {
+        myClient.Connect("localhost:801");  // Substitua pelo endereço IP e porta do seu servidor Vicon
+        std::cout << ".";
+        sleep(1);
+    }
+    std::cout << "\nConnected!" << std::endl;
+
+    // Configura o modo de transmissão
+    myClient.SetStreamMode(StreamMode::ClientPull);
+
+    // Configura o mapeamento de eixos
+    myClient.SetAxisMapping(Direction::Forward, Direction::Left, Direction::Up);
+
+    // Ativa os dados de segmentos
+    myClient.EnableSegmentData();
+
+    // Verifica se a ativação foi bem-sucedida
+    if (!myClient.IsSegmentDataEnabled().Enabled)
+    {
+        std::cerr << "Failed to enable segment data!" << std::endl;
+        return 1;
+    }
+
+    // Nome do sujeito e segmento para rastrear
+    std::string subjectName = "Disco";  // Nome do objeto que você está rastreando
+    std::string segmentName = subjectName; // Para simplicidade, assumimos que o segmento principal tem o mesmo nome que o sujeito
+
+    while (true)
+    {
+        // Atualiza os dados
+        myClient.GetFrame();
+
+        // Obtém a tradução global do segmento
+        Output_GetSegmentGlobalTranslation translation = myClient.GetSegmentGlobalTranslation(subjectName, segmentName);
+
+        if (translation.Result == Result::Success)
+        {
+            std::cout << "Object: " << subjectName << std::endl;
+            std::cout << "Translation: " << translation.Translation[0] << ", "
+                      << translation.Translation[1] << ", "
+                      << translation.Translation[2] << std::endl;
+        }
+        else
+        {
+            std::cerr << "Failed to get translation for " << subjectName << std::endl;
+        }
+
+        sleep(1);  // Ajuste o intervalo conforme necessário
+    }
+
+    // Desconecta do servidor Vicon
+    myClient.Disconnect();
+    std::cout << "Disconnected from Vicon server." << std::endl;
+
+    return 0;
+}
