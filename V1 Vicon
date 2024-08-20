@@ -39,7 +39,7 @@ int main()
     }
 
     // Nome do sujeito e segmento para rastrear
-    std::string subjectName = "Disco";  // Nome do objeto que você está rastreando
+    std::string subjectName = "Tello1";  // Nome do objeto que você está rastreando
     std::string segmentName = subjectName; // Para simplicidade, assumimos que o segmento principal tem o mesmo nome que o sujeito
 
     // Configura a fila para armazenar as últimas 2 posições e o tempo associado
