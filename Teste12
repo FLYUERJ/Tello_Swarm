@@ -1,0 +1,52 @@
+from djitellopy import Tello
+import socket
+import time
+
+# Configurações do Vicon
+VICON_SERVER_IP = '152.92.155.19'
+VICON_SERVER_PORT = 801
+
+# Função para conectar ao servidor Vicon e obter os dados de tradução
+def get_vicon_translation(subject_name):
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+        sock.connect((VICON_SERVER_IP, VICON_SERVER_PORT))
+
+        # Envia uma mensagem para iniciar a conexão (dependendo do protocolo do Vicon)
+        sock.sendto(b'Connect to Vicon', (VICON_SERVER_IP, VICON_SERVER_PORT))
+
+        # Recebe a resposta do servidor Vicon
+        data, _ = sock.recvfrom(1024)
+        translation = data.decode().split(',')
+
+        # Converte os dados recebidos em uma lista de floats
+        translation = list(map(float, translation))
+
+        print(f"Translation: {translation[0]}, {translation[1]}, {translation[2]}")
+        return translation
+
+# Inicializa o drone Tello
+tello = Tello()
+
+# Conecta ao drone
+tello.connect()
+
+# Verifica se a conexão foi bem-sucedida
+if tello.get_battery() > 20:  # Verifica se a bateria está suficientemente carregada
+    print("Decolando...")
+    tello.takeoff()  # Decola o drone
+
+    # Obtém a posição atual do objeto rastreado
+    subject_name = "disco"  # Nome do objeto que você está rastreando
+    current_position = get_vicon_translation(subject_name)
+    
+    # Espera 10 segundos
+    time.sleep(10)
+
+    # Pousa o drone
+    print("Pousando...")
+    tello.land()
+
+else:
+    print("Nível de bateria insuficiente para decolagem.")
+
+# Finaliza a conexão com o
