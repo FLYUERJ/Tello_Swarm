@@ -42,7 +42,7 @@ int main()
     std::string subjectName = "Disco";  // Nome do objeto que você está rastreando
     std::string segmentName = subjectName; // Para simplicidade, assumimos que o segmento principal tem o mesmo nome que o sujeito
 
-    // Configura a fila para armazenar as últimas 3 posições e o tempo associado
+    // Configura a fila para armazenar as últimas 2 posições e o tempo associado
     std::deque<std::pair<std::array<double, 3>, std::chrono::steady_clock::time_point>> positions;
 
     while (true)
@@ -63,51 +63,34 @@ int main()
 
             // Adiciona a nova posição e o tempo à fila
             positions.push_back(std::make_pair(position, currentTime));
-            if (positions.size() > 3)
+            if (positions.size() > 2)
             {
                 positions.pop_front();
             }
 
-            // Verifica se há dados suficientes para calcular a velocidade e a aceleração
-            if (positions.size() == 3)
+            // Verifica se há dados suficientes para calcular a velocidade
+            if (positions.size() == 2)
             {
                 // Calcula o intervalo de tempo entre as medições
                 auto time1 = positions[0].second;
                 auto time2 = positions[1].second;
-                auto time3 = positions[2].second;
-                double dt1 = std::chrono::duration<double>(time2 - time1).count();
-                double dt2 = std::chrono::duration<double>(time3 - time2).count();
+                double dt = std::chrono::duration<double>(time2 - time1).count();
 
-                if (dt1 > 0 && dt2 > 0)
+                if (dt > 0)
                 {
                     // Calcula as diferenças de posição
                     std::array<double, 3> pos1 = positions[0].first;
                     std::array<double, 3> pos2 = positions[1].first;
-                    std::array<double, 3> pos3 = positions[2].first;
 
-                    std::array<double, 3> velocity1 = {
-                        (pos2[0] - pos1[0]) / dt1,
-                        (pos2[1] - pos1[1]) / dt1,
-                        (pos2[2] - pos1[2]) / dt1
-                    };
-
-                    std::array<double, 3> velocity2 = {
-                        (pos3[0] - pos2[0]) / dt2,
-                        (pos3[1] - pos2[1]) / dt2,
-                        (pos3[2] - pos2[2]) / dt2
-                    };
-
-                    // Calcula a aceleração
-                    std::array<double, 3> acceleration = {
-                        (velocity2[0] - velocity1[0]) / ((dt1 + dt2) / 2.0),
-                        (velocity2[1] - velocity1[1]) / ((dt1 + dt2) / 2.0),
-                        (velocity2[2] - velocity1[2]) / ((dt1 + dt2) / 2.0)
+                    std::array<double, 3> velocity = {
+                        (pos2[0] - pos1[0]) / dt,
+                        (pos2[1] - pos1[1]) / dt,
+                        (pos2[2] - pos1[2]) / dt
                     };
 
                     // Exibe os resultados
                     std::cout << "Position: (" << position[0] << ", " << position[1] << ", " << position[2] << ")" << std::endl;
-                    std::cout << "Velocity: (" << velocity2[0] << ", " << velocity2[1] << ", " << velocity2[2] << ")" << std::endl;
-                    std::cout << "Acceleration: (" << acceleration[0] << ", " << acceleration[1] << ", " << acceleration[2] << ")" << std::endl;
+                    std::cout << "Velocity: (" << velocity[0] << ", " << velocity[1] << ", " << velocity[2] << ")" << std::endl;
                 }
             }
         }
