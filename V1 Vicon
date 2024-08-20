@@ -13,7 +13,7 @@ int main()
     std::cout << "Connecting to Vicon server..." << std::endl;
     while (!myClient.IsConnected().Connected)
     {
-        myClient.Connect("localhost:801");  // Substitua pelo endereço IP e porta do seu servidor Vicon
+        myClient.Connect("152.92.155.19:801");  // Substitua pelo endereço IP e porta do seu servidor Vicon
         std::cout << ".";
         sleep(1);
     }
