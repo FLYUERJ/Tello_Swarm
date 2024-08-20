@@ -1,8 +1,11 @@
 #include <iostream>
 #include <ViconDataStreamSDK_CPP/DataStreamClient.h>
 #include <unistd.h>  // Para sleep()
+#include <deque>     // Para std::deque
 
 using namespace ViconDataStreamSDK::CPP;
+
+const double TIME_INTERVAL = 0.1; // Intervalo de tempo entre as medições (em segundos)
 
 int main()
 {
@@ -28,10 +31,6 @@ int main()
     // Ativa os dados de segmentos
     myClient.EnableSegmentData();
 
-    // Habilita dados de velocidade e aceleração
-    myClient.EnableSegmentVelocityData();
-    myClient.EnableSegmentAccelerationData();
-
     // Verifica se a ativação foi bem-sucedida
     if (!myClient.IsSegmentDataEnabled().Enabled)
     {
@@ -39,21 +38,12 @@ int main()
         return 1;
     }
 
-    if (!myClient.IsSegmentVelocityDataEnabled().Enabled)
-    {
-        std::cerr << "Failed to enable segment velocity data!" << std::endl;
-        return 1;
-    }
-
-    if (!myClient.IsSegmentAccelerationDataEnabled().Enabled)
-    {
-        std::cerr << "Failed to enable segment acceleration data!" << std::endl;
-        return 1;
-    }
-
     // Nome do sujeito e segmento para rastrear
     std::string subjectName = "Tello1";  // Nome do objeto que você está rastreando
     std::string segmentName = subjectName; // Para simplicidade, assumimos que o segmento principal tem o mesmo nome que o sujeito
+
+    // Fila para armazenar as posições e tempos
+    std::deque<std::pair<double[3], double>> positions; // <posição, tempo>
 
     while (true)
     {
@@ -63,33 +53,69 @@ int main()
         // Obtém a tradução global do segmento
         Output_GetSegmentGlobalTranslation translation = myClient.GetSegmentGlobalTranslation(subjectName, segmentName);
 
-        // Obtém a velocidade de translação global do segmento
-        Output_GetSegmentGlobalTranslationVelocity velocity = myClient.GetSegmentGlobalTranslationVelocity(subjectName, segmentName);
-
-        // Obtém a aceleração de translação global do segmento
-        Output_GetSegmentGlobalTranslationAcceleration acceleration = myClient.GetSegmentGlobalTranslationAcceleration(subjectName, segmentName);
-
-        if (translation.Result == Result::Success && 
-            velocity.Result == Result::Success && 
-            acceleration.Result == Result::Success)
+        if (translation.Result == Result::Success)
         {
-            std::cout << "Object: " << subjectName << std::endl;
-            std::cout << "Translation: " << translation.Translation[0] << ", "
-                      << translation.Translation[1] << ", "
-                      << translation.Translation[2] << std::endl;
-            std::cout << "Velocity: " << velocity.TranslationVelocity[0] << ", "
-                      << velocity.TranslationVelocity[1] << ", "
-                      << velocity.TranslationVelocity[2] << std::endl;
-            std::cout << "Acceleration: " << acceleration.TranslationAcceleration[0] << ", "
-                      << acceleration.TranslationAcceleration[1] << ", "
-                      << acceleration.TranslationAcceleration[2] << std::endl;
+            double currentTime = static_cast<double>(time(nullptr)); // Obtém o tempo atual
+            double position[3] = { translation.Translation[0], translation.Translation[1], translation.Translation[2] };
+
+            // Adiciona a nova posição e tempo à fila
+            positions.push_back(std::make_pair(position, currentTime));
+
+            // Mantém apenas os dados mais recentes
+            if (positions.size() > 3)
+            {
+                positions.pop_front();
+            }
+
+            if (positions.size() >= 2)
+            {
+                // Obtém as duas últimas posições e tempos
+                auto [prevPosition, prevTime] = positions[positions.size() - 2];
+                auto [currPosition, currTime] = positions.back();
+
+                // Calcula a velocidade
+                double deltaTime = currTime - prevTime;
+                double velocity[3];
+                for (int i = 0; i < 3; ++i)
+                {
+                    velocity[i] = (currPosition[i] - prevPosition[i]) / deltaTime;
+                }
+
+                // Calcula a aceleração, se houver dados suficientes
+                if (positions.size() == 3)
+                {
+                    auto [prevPrevPosition, prevPrevTime] = positions[positions.size() - 3];
+                    double prevDeltaTime = prevTime - prevPrevTime;
+                    double prevVelocity[3];
+                    for (int i = 0; i < 3; ++i)
+                    {
+                        prevVelocity[i] = (prevPosition[i] - prevPrevPosition[i]) / prevDeltaTime;
+                    }
+
+                    double acceleration[3];
+                    for (int i = 0; i < 3; ++i)
+                    {
+                        acceleration[i] = (velocity[i] - prevVelocity[i]) / deltaTime;
+                    }
+
+                    // Exibe a aceleração
+                    std::cout << "Acceleration: " << acceleration[0] << ", " << acceleration[1] << ", " << acceleration[2] << std::endl;
+                }
+
+                // Exibe a velocidade
+                std::cout << "Velocity: " << velocity[0] << ", " << velocity[1] << ", " << velocity[2] << std::endl;
+            }
+            else
+            {
+                std::cout << "Not enough data to calculate velocity and acceleration." << std::endl;
+            }
         }
         else
         {
-            std::cerr << "Failed to get data for " << subjectName << std::endl;
+            std::cerr << "Failed to get translation for " << subjectName << std::endl;
         }
 
-        sleep(1);  // Ajuste o intervalo conforme necessário
+        sleep(TIME_INTERVAL);  // Ajuste o intervalo conforme necessário
     }
 
     // Desconecta do servidor Vicon
