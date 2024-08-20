@@ -13,7 +13,7 @@ int main()
     std::cout << "Connecting to Vicon server..." << std::endl;
     while (!myClient.IsConnected().Connected)
     {
-        myClient.Connect("152.92.155.19:801");  // Substitua pelo endereço IP e porta do seu servidor Vicon
+        myClient.Connect("localhost:801");  // Substitua pelo endereço IP e porta do seu servidor Vicon
         std::cout << ".";
         sleep(1);
     }
@@ -28,10 +28,26 @@ int main()
     // Ativa os dados de segmentos
     myClient.EnableSegmentData();
 
+    // Habilita dados de velocidade e aceleração
+    myClient.EnableSegmentVelocityData();
+    myClient.EnableSegmentAccelerationData();
+
     // Verifica se a ativação foi bem-sucedida
     if (!myClient.IsSegmentDataEnabled().Enabled)
     {
         std::cerr << "Failed to enable segment data!" << std::endl;
+        return 1;
+    }
+
+    if (!myClient.IsSegmentVelocityDataEnabled().Enabled)
+    {
+        std::cerr << "Failed to enable segment velocity data!" << std::endl;
+        return 1;
+    }
+
+    if (!myClient.IsSegmentAccelerationDataEnabled().Enabled)
+    {
+        std::cerr << "Failed to enable segment acceleration data!" << std::endl;
         return 1;
     }
 
