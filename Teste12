@@ -36,7 +36,7 @@ if tello.get_battery() > 20:  # Verifica se a bateria está suficientemente carr
     tello.takeoff()  # Decola o drone
 
     # Obtém a posição atual do objeto rastreado
-    subject_name = "disco"  # Nome do objeto que você está rastreando
+    subject_name = "Tello1"  # Nome do objeto que você está rastreando
     current_position = get_vicon_translation(subject_name)
     
     # Espera 10 segundos
