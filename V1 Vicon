@@ -14,12 +14,23 @@ int main()
 
     // Conecta ao servidor Vicon
     std::cout << "Connecting to Vicon server..." << std::endl;
-    while (!myClient.IsConnected().Connected)
+    int attempt = 0;
+    const int maxAttempts = 10;  // Limite de tentativas de conexão
+
+    while (!myClient.IsConnected().Connected && attempt < maxAttempts)
     {
         myClient.Connect("localhost:801");  // Substitua pelo endereço IP e porta do seu servidor Vicon
         std::cout << ".";
         sleep(1);  // Espera 1 segundo antes de tentar conectar novamente
+        attempt++;
     }
+
+    if (!myClient.IsConnected().Connected)
+    {
+        std::cerr << "\nFailed to connect to Vicon server!" << std::endl;
+        return 1;
+    }
+
     std::cout << "\nConnected!" << std::endl;
 
     // Configura o modo de transmissão
@@ -48,7 +59,11 @@ int main()
     while (true)
     {
         // Atualiza os dados do Vicon
-        myClient.GetFrame();
+        if (myClient.GetFrame().Result != Result::Success)
+        {
+            std::cerr << "Failed to get frame data!" << std::endl;
+            continue;
+        }
 
         // Obtém a tradução global do segmento
         Output_GetSegmentGlobalTranslation translation = myClient.GetSegmentGlobalTranslation(subjectName, segmentName);
