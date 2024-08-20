@@ -7,7 +7,7 @@ from pyvicon import StreamMode, Direction
 
 vicon = pyvicon.PyVicon()
 
-vicon.connect("152.92.155.4")
+vicon.connect("152.92.155.19")
 print(vicon.is_connected())
 
 vicon.enable_device_data()
@@ -23,14 +23,20 @@ vicon.set_stream_mode(StreamMode.ClientPull)
 #Direction::Up )
 vicon.set_axis_mapping(Direction.Forward,Direction.Left,Direction.Up)
 
-counts = vicon.get_subject_count()
+isenabled = vicon.is_device_data_enabled()
 
+subject_name = "Tello1"
+segment_name = subject_name
 
 while True:
-    counts = vicon.get_subject_count()
-    print(counts)
-    ##print(vicon.get_marker_name("disco",0))
-    ##print(vicon.get_subject_count())
-    time.sleep(0.03)
 
-    pass
+    vicon.get_frame()
+
+    translation = vicon.get_segment_global_translation(subject_name,segment_name)
+
+    if(translation.any() != None):
+        print(f"""X:{translation[0]}\nY:{translation[1]}Z:{translation[2]}""")
+    else:
+        print("Failed get translation")
+    time.sleep(0.5)
+

@@ -1,8 +1,52 @@
 #include <iostream>
-#include <ViconDataStreamSDK_CPP/DataStreamClient.h>
+#include "DataStreamClient.h"
 #include <unistd.h>  // Para sleep()
 
+#include <iostream>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <stdlib.h>
+#include <string>
+#include <string.h>
+
+
 using namespace ViconDataStreamSDK::CPP;
+
+int createTelloSocket(){
+
+    int sockfd;
+    char buffer[1024];
+    struct sockaddr_in servaddr;
+
+    // Creating socket file descriptor
+    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+        std::cerr << "Socket creation failed" << std::endl;
+        return -1;
+    }
+
+    memset(&servaddr, 0, sizeof(servaddr));
+
+    // Filling server information
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_port = htons(8889);
+    servaddr.sin_addr.s_addr = INADDR_ANY;
+
+    const char *hello = "Hello from client";
+    sendto(sockfd, hello, strlen(hello), MSG_CONFIRM, (const struct sockaddr *)&servaddr, sizeof(servaddr));
+    std::cout << "Hello message sent." << std::endl;
+
+    socklen_t len;
+    int n;
+
+    n = recvfrom(sockfd, (char *)buffer, 1024, MSG_WAITALL, (struct sockaddr *)&servaddr, &len);
+    buffer[n] = '\0';
+    std::cout << "Server : " << buffer << std::endl;
+
+    close(sockfd);
+
+
+}
+
 
 int main()
 {
@@ -13,7 +57,7 @@ int main()
     std::cout << "Connecting to Vicon server..." << std::endl;
     while (!myClient.IsConnected().Connected)
     {
-        myClient.Connect("localhost:801");  // Substitua pelo endereço IP e porta do seu servidor Vicon
+        myClient.Connect("152.92.155.50:801");  // Substitua pelo endereço IP e porta do seu servidor Vicon
         std::cout << ".";
         sleep(1);
     }
@@ -36,7 +80,7 @@ int main()
     }
 
     // Nome do sujeito e segmento para rastrear
-    std::string subjectName = "Disco";  // Nome do objeto que você está rastreando
+    std::string subjectName = "disco";  // Nome do objeto que você está rastreando
     std::string segmentName = subjectName; // Para simplicidade, assumimos que o segmento principal tem o mesmo nome que o sujeito
 
     while (true)
