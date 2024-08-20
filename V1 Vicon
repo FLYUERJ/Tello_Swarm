@@ -1,11 +1,11 @@
 #include <iostream>
 #include <ViconDataStreamSDK_CPP/DataStreamClient.h>
 #include <unistd.h>  // Para sleep()
-#include <deque>     // Para std::deque
+#include <deque>    // Para deque
+#include <utility>  // Para std::pair
+#include <chrono>   // Para std::chrono
 
 using namespace ViconDataStreamSDK::CPP;
-
-const double TIME_INTERVAL = 0.1; // Intervalo de tempo entre as medições (em segundos)
 
 int main()
 {
@@ -39,11 +39,11 @@ int main()
     }
 
     // Nome do sujeito e segmento para rastrear
-    std::string subjectName = "Tello1";  // Nome do objeto que você está rastreando
+    std::string subjectName = "Disco";  // Nome do objeto que você está rastreando
     std::string segmentName = subjectName; // Para simplicidade, assumimos que o segmento principal tem o mesmo nome que o sujeito
 
-    // Fila para armazenar as posições e tempos
-    std::deque<std::pair<double[3], double>> positions; // <posição, tempo>
+    // Configura a fila para armazenar as últimas 3 posições e o tempo associado
+    std::deque<std::pair<std::array<double, 3>, std::chrono::steady_clock::time_point>> positions;
 
     while (true)
     {
@@ -55,59 +55,60 @@ int main()
 
         if (translation.Result == Result::Success)
         {
-            double currentTime = static_cast<double>(time(nullptr)); // Obtém o tempo atual
-            double position[3] = { translation.Translation[0], translation.Translation[1], translation.Translation[2] };
+            // Obtém a posição atual
+            std::array<double, 3> position = { translation.Translation[0], translation.Translation[1], translation.Translation[2] };
 
-            // Adiciona a nova posição e tempo à fila
+            // Obtém o tempo atual
+            auto currentTime = std::chrono::steady_clock::now();
+
+            // Adiciona a nova posição e o tempo à fila
             positions.push_back(std::make_pair(position, currentTime));
-
-            // Mantém apenas os dados mais recentes
             if (positions.size() > 3)
             {
                 positions.pop_front();
             }
 
-            if (positions.size() >= 2)
+            // Verifica se há dados suficientes para calcular a velocidade e a aceleração
+            if (positions.size() == 3)
             {
-                // Obtém as duas últimas posições e tempos
-                auto [prevPosition, prevTime] = positions[positions.size() - 2];
-                auto [currPosition, currTime] = positions.back();
+                // Calcula o intervalo de tempo entre as medições
+                auto time1 = positions[0].second;
+                auto time2 = positions[1].second;
+                auto time3 = positions[2].second;
+                double dt1 = std::chrono::duration<double>(time2 - time1).count();
+                double dt2 = std::chrono::duration<double>(time3 - time2).count();
 
-                // Calcula a velocidade
-                double deltaTime = currTime - prevTime;
-                double velocity[3];
-                for (int i = 0; i < 3; ++i)
+                if (dt1 > 0 && dt2 > 0)
                 {
-                    velocity[i] = (currPosition[i] - prevPosition[i]) / deltaTime;
+                    // Calcula as diferenças de posição
+                    std::array<double, 3> pos1 = positions[0].first;
+                    std::array<double, 3> pos2 = positions[1].first;
+                    std::array<double, 3> pos3 = positions[2].first;
+
+                    std::array<double, 3> velocity1 = {
+                        (pos2[0] - pos1[0]) / dt1,
+                        (pos2[1] - pos1[1]) / dt1,
+                        (pos2[2] - pos1[2]) / dt1
+                    };
+
+                    std::array<double, 3> velocity2 = {
+                        (pos3[0] - pos2[0]) / dt2,
+                        (pos3[1] - pos2[1]) / dt2,
+                        (pos3[2] - pos2[2]) / dt2
+                    };
+
+                    // Calcula a aceleração
+                    std::array<double, 3> acceleration = {
+                        (velocity2[0] - velocity1[0]) / ((dt1 + dt2) / 2.0),
+                        (velocity2[1] - velocity1[1]) / ((dt1 + dt2) / 2.0),
+                        (velocity2[2] - velocity1[2]) / ((dt1 + dt2) / 2.0)
+                    };
+
+                    // Exibe os resultados
+                    std::cout << "Position: (" << position[0] << ", " << position[1] << ", " << position[2] << ")" << std::endl;
+                    std::cout << "Velocity: (" << velocity2[0] << ", " << velocity2[1] << ", " << velocity2[2] << ")" << std::endl;
+                    std::cout << "Acceleration: (" << acceleration[0] << ", " << acceleration[1] << ", " << acceleration[2] << ")" << std::endl;
                 }
-
-                // Calcula a aceleração, se houver dados suficientes
-                if (positions.size() == 3)
-                {
-                    auto [prevPrevPosition, prevPrevTime] = positions[positions.size() - 3];
-                    double prevDeltaTime = prevTime - prevPrevTime;
-                    double prevVelocity[3];
-                    for (int i = 0; i < 3; ++i)
-                    {
-                        prevVelocity[i] = (prevPosition[i] - prevPrevPosition[i]) / prevDeltaTime;
-                    }
-
-                    double acceleration[3];
-                    for (int i = 0; i < 3; ++i)
-                    {
-                        acceleration[i] = (velocity[i] - prevVelocity[i]) / deltaTime;
-                    }
-
-                    // Exibe a aceleração
-                    std::cout << "Acceleration: " << acceleration[0] << ", " << acceleration[1] << ", " << acceleration[2] << std::endl;
-                }
-
-                // Exibe a velocidade
-                std::cout << "Velocity: " << velocity[0] << ", " << velocity[1] << ", " << velocity[2] << std::endl;
-            }
-            else
-            {
-                std::cout << "Not enough data to calculate velocity and acceleration." << std::endl;
             }
         }
         else
@@ -115,7 +116,7 @@ int main()
             std::cerr << "Failed to get translation for " << subjectName << std::endl;
         }
 
-        sleep(TIME_INTERVAL);  // Ajuste o intervalo conforme necessário
+        sleep(1);  // Ajuste o intervalo conforme necessário
     }
 
     // Desconecta do servidor Vicon
