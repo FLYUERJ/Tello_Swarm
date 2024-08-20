@@ -1,7 +1,7 @@
 #include <iostream>
 #include <ViconDataStreamSDK_CPP/DataStreamClient.h>
 #include <unistd.h>  // Para sleep()
-#include <deque>    // Para deque
+#include <deque>    // Para std::deque
 #include <utility>  // Para std::pair
 #include <chrono>   // Para std::chrono
 
@@ -9,7 +9,7 @@ using namespace ViconDataStreamSDK::CPP;
 
 int main()
 {
-    // Cria o cliente
+    // Cria o cliente Vicon
     Client myClient;
 
     // Conecta ao servidor Vicon
@@ -18,7 +18,7 @@ int main()
     {
         myClient.Connect("localhost:801");  // Substitua pelo endereço IP e porta do seu servidor Vicon
         std::cout << ".";
-        sleep(1);
+        sleep(1);  // Espera 1 segundo antes de tentar conectar novamente
     }
     std::cout << "\nConnected!" << std::endl;
 
@@ -39,15 +39,15 @@ int main()
     }
 
     // Nome do sujeito e segmento para rastrear
-    std::string subjectName = "Disco";  // Nome do objeto que você está rastreando
-    std::string segmentName = subjectName; // Para simplicidade, assumimos que o segmento principal tem o mesmo nome que o sujeito
+    std::string subjectName = "Tello1";  // Nome do objeto que você está rastreando
+    std::string segmentName = subjectName; // Assumimos que o segmento principal tem o mesmo nome que o sujeito
 
-    // Configura a fila para armazenar as últimas 2 posições e o tempo associado
+    // Fila para armazenar as últimas 2 posições e o tempo associado
     std::deque<std::pair<std::array<double, 3>, std::chrono::steady_clock::time_point>> positions;
 
     while (true)
     {
-        // Atualiza os dados
+        // Atualiza os dados do Vicon
         myClient.GetFrame();
 
         // Obtém a tradução global do segmento
@@ -65,7 +65,7 @@ int main()
             positions.push_back(std::make_pair(position, currentTime));
             if (positions.size() > 2)
             {
-                positions.pop_front();
+                positions.pop_front();  // Remove a posição mais antiga
             }
 
             // Verifica se há dados suficientes para calcular a velocidade
